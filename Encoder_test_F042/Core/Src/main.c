@@ -94,7 +94,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Encoder_Start_IT(&htim2, TIM_CHANNEL_ALL);
+//  HAL_TIM_Encoder_Start_IT(&htim2, TIM_CHANNEL_ALL);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -250,7 +250,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : ENCODER_B_Pin ENCODER_A_Pin */
   GPIO_InitStruct.Pin = ENCODER_B_Pin|ENCODER_A_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -260,25 +260,47 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(Button_in_GPIO_Port, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
+uint8_t old_enc_state = 0;
+uint8_t new_enc_state = 0;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-//	static uint16_t enc_combination = 0;
-//	bool encoder_a_reading, encoder_b_reading;
-//	uint8_t current_reading;
-//	switch(GPIO_Pin){
-//	case ENCODER_A_Pin:
-//		encoder_a_reading = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
-//		encoder_b_reading = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
-//		current_reading = current_reading << 2 | (encoder_a_reading << 1 | encoder_b_reading);
-//		if(current_reading == ){
-//
-//		}
-//		break;
-//	case ENCODER_B_Pin:
-//		break;
-//	}
+	/*
+	 * 	0	-	0
+	 * 	0	-	1
+	 * 	1	-	1
+	 * 	1	-	0
+	 * 	0	-	0
+	 */
+	if(GPIO_Pin == ENCODER_A_Pin || GPIO_Pin == ENCODER_B_Pin){
+		new_enc_state = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin) << 1| HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
+		if(old_enc_state == 0 && new_enc_state == 1){
+			counter++;
+		}else if(old_enc_state == 1 && new_enc_state == 3){
+			counter++;
+		}else if(old_enc_state == 3 && new_enc_state == 2){
+			counter++;
+		}else if(old_enc_state == 2 && new_enc_state == 0){
+			counter++;
+		}else if(old_enc_state == 0 && new_enc_state == 2){
+			counter--;
+		}else if(old_enc_state == 2 && new_enc_state == 3){
+			counter--;
+		}else if(old_enc_state == 3 && new_enc_state == 1){
+			counter--;
+		}else if(old_enc_state == 1 && new_enc_state == 0){
+			counter--;
+		}
+		old_enc_state = new_enc_state;
+	}
 }
 /* USER CODE END 4 */
 

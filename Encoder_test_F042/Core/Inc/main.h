@@ -63,6 +63,7 @@ void Error_Handler(void);
 #define VCP_TX_GPIO_Port GPIOA
 #define ENCODER_B_Pin GPIO_PIN_0
 #define ENCODER_B_GPIO_Port GPIOB
+#define ENCODER_B_EXTI_IRQn EXTI0_1_IRQn
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14
@@ -73,6 +74,7 @@ void Error_Handler(void);
 #define Button_in_GPIO_Port GPIOB
 #define ENCODER_A_Pin GPIO_PIN_7
 #define ENCODER_A_GPIO_Port GPIOB
+#define ENCODER_A_EXTI_IRQn EXTI4_15_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
