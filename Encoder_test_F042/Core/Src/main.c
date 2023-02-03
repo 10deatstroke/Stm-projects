@@ -53,7 +53,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-int32_t counter = 0;
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -94,7 +94,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_TIM_Encoder_Start_IT(&htim2, TIM_CHANNEL_ALL);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -273,34 +273,7 @@ static void MX_GPIO_Init(void)
 uint8_t old_enc_state = 0;
 uint8_t new_enc_state = 0;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	/*
-	 * 	0	-	0
-	 * 	0	-	1
-	 * 	1	-	1
-	 * 	1	-	0
-	 * 	0	-	0
-	 */
-	if(GPIO_Pin == ENCODER_A_Pin || GPIO_Pin == ENCODER_B_Pin){
-		new_enc_state = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin) << 1| HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
-		if(old_enc_state == 0 && new_enc_state == 1){
-			counter++;
-		}else if(old_enc_state == 1 && new_enc_state == 3){
-			counter++;
-		}else if(old_enc_state == 3 && new_enc_state == 2){
-			counter++;
-		}else if(old_enc_state == 2 && new_enc_state == 0){
-			counter++;
-		}else if(old_enc_state == 0 && new_enc_state == 2){
-			counter--;
-		}else if(old_enc_state == 2 && new_enc_state == 3){
-			counter--;
-		}else if(old_enc_state == 3 && new_enc_state == 1){
-			counter--;
-		}else if(old_enc_state == 1 && new_enc_state == 0){
-			counter--;
-		}
-		old_enc_state = new_enc_state;
-	}
+	Interrupt_reader(GPIO_Pin);
 }
 /* USER CODE END 4 */
 
