@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -59,6 +59,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOF
+#define Out_Encoder_A_Pin GPIO_PIN_0
+#define Out_Encoder_A_GPIO_Port GPIOA
+#define Out_Encoder_B_Pin GPIO_PIN_1
+#define Out_Encoder_B_GPIO_Port GPIOA
 #define VCP_TX_Pin GPIO_PIN_2
 #define VCP_TX_GPIO_Port GPIOA
 #define ENCODER_B_Pin GPIO_PIN_0
@@ -70,6 +74,12 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define VCP_RX_Pin GPIO_PIN_15
 #define VCP_RX_GPIO_Port GPIOA
+#define Temp_in_b_Pin GPIO_PIN_4
+#define Temp_in_b_GPIO_Port GPIOB
+#define Temp_in_b_EXTI_IRQn EXTI4_15_IRQn
+#define Temp_in_a_Pin GPIO_PIN_5
+#define Temp_in_a_GPIO_Port GPIOB
+#define Temp_in_a_EXTI_IRQn EXTI4_15_IRQn
 #define Button_in_Pin GPIO_PIN_6
 #define Button_in_GPIO_Port GPIOB
 #define ENCODER_A_Pin GPIO_PIN_7

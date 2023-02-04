@@ -21,7 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stdbool.h"
+#include "Input_reading.h"
+#include "Encoder_reading.h"
+#include "Output_reading.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,9 +41,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- TIM_HandleTypeDef htim2;
-
-UART_HandleTypeDef huart2;
+ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -51,16 +51,13 @@ UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim){
-	counter = (int32_t)__HAL_TIM_GET_COUNTER(htim);
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -92,7 +89,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -101,14 +97,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	 if(HAL_GPIO_ReadPin(Button_in_GPIO_Port, Button_in_Pin) == GPIO_PIN_RESET){
-		 HAL_Delay(20);
-		 if(HAL_GPIO_ReadPin(Button_in_GPIO_Port, Button_in_Pin) == GPIO_PIN_RESET){
-			 counter = 0;
-			 __HAL_TIM_SET_COUNTER(&htim2, 0);
-		 }
-	 }
+	Input_reading();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -148,55 +137,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_Encoder_InitTypeDef sConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_FALLING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
-  sConfig.IC2Polarity = TIM_ICPOLARITY_FALLING;
-  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
-  if (HAL_TIM_Encoder_Init(&htim2, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-
 }
 
 /**
@@ -248,8 +188,18 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pins : ENCODER_B_Pin ENCODER_A_Pin */
-  GPIO_InitStruct.Pin = ENCODER_B_Pin|ENCODER_A_Pin;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, Out_Encoder_A_Pin|Out_Encoder_B_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : Out_Encoder_A_Pin Out_Encoder_B_Pin */
+  GPIO_InitStruct.Pin = Out_Encoder_A_Pin|Out_Encoder_B_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : ENCODER_B_Pin Temp_in_b_Pin Temp_in_a_Pin ENCODER_A_Pin */
+  GPIO_InitStruct.Pin = ENCODER_B_Pin|Temp_in_b_Pin|Temp_in_a_Pin|ENCODER_A_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -270,8 +220,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-uint8_t old_enc_state = 0;
-uint8_t new_enc_state = 0;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	Interrupt_reader(GPIO_Pin);
 }

@@ -10,21 +10,17 @@
 
 #include "main.h"
 
-/*
- * 0 - Interrupt based reading
- * 1 - Timer based reading
-*/
-#define ENCODER_READING_MODE	0
+struct encoder_input{
+	bool encoder_a_input;
+	bool encoder_b_input;
+	bool prev_encoder_a_input;
+	bool prev_encoder_b_input;
+	uint8_t encoder_a_update_counter;
+	uint8_t encoder_b_update_counter;
+};
 
-
-#if ENCODER_READING_MODE == 1
-void Timer_read_start(TIM_HandleTypeDef*);
-#else
 void Interrupt_reader(uint16_t);
-#endif
+void Input_2_change_mode();
 
-void Input_2_change_mode(){
-
-}
 
 #endif /* ENCODER_READING_ENCODER_READING_H_ */
