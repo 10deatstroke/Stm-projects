@@ -74,17 +74,10 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define VCP_RX_Pin GPIO_PIN_15
 #define VCP_RX_GPIO_Port GPIOA
-#define Temp_in_b_Pin GPIO_PIN_4
-#define Temp_in_b_GPIO_Port GPIOB
-#define Temp_in_b_EXTI_IRQn EXTI4_15_IRQn
-#define Temp_in_a_Pin GPIO_PIN_5
-#define Temp_in_a_GPIO_Port GPIOB
-#define Temp_in_a_EXTI_IRQn EXTI4_15_IRQn
-#define Button_in_Pin GPIO_PIN_6
-#define Button_in_GPIO_Port GPIOB
 #define ENCODER_A_Pin GPIO_PIN_7
 #define ENCODER_A_GPIO_Port GPIOB
 #define ENCODER_A_EXTI_IRQn EXTI4_15_IRQn
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

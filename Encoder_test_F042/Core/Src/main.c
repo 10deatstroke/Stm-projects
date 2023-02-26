@@ -21,9 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "Input_reading.h"
-#include "Encoder_reading.h"
-#include "Output_reading.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,13 +35,31 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define OUTPUT_LOOPED_IN	1
 
+#define COMPLETE_ROTATION_COUNT		80
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint32_t base_sec_counter;		// will be holding milliseconds, so result will be x1000 for seconds
+
+// 	encoder input variables
+uint8_t old_enc_state, new_enc_state;
+int32_t input_counter;
+int16_t rotation_count;
+struct encoder_input{
+	bool encoder_a_input;
+	bool encoder_b_input;
+}enc_input;
+
+
+#if OUTPUT_LOOPED_IN == 1
+uint8_t generated_out_enc_old_state, generated_out_enc_new_state;
+int32_t generated_output;
+#endif
 
 /* USER CODE END PV */
 
@@ -52,7 +68,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void Interrupt_reader(uint16_t);
+void set_base_sec_timer(uint32_t time);
+void reset_input_counter(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -90,14 +108,20 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  set_base_sec_timer(HAL_GetTick());
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	Input_reading();
+	  uint32_t current_time = HAL_GetTick();
+
+//	  timer and counter reset logic
+	  if(current_time - base_sec_counter > 7000){
+		  set_base_sec_timer(current_time);
+		  reset_input_counter();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -198,17 +222,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ENCODER_B_Pin Temp_in_b_Pin Temp_in_a_Pin ENCODER_A_Pin */
-  GPIO_InitStruct.Pin = ENCODER_B_Pin|Temp_in_b_Pin|Temp_in_a_Pin|ENCODER_A_Pin;
+  /*Configure GPIO pins : ENCODER_B_Pin ENCODER_A_Pin */
+  GPIO_InitStruct.Pin = ENCODER_B_Pin|ENCODER_A_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : Button_in_Pin */
-  GPIO_InitStruct.Pin = Button_in_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Button_in_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
@@ -220,8 +238,87 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void Interrupt_reader(uint16_t Gpio_pin) {
+	/*
+	 * states
+	 * 	+---+----+
+	 * 	|A	|	B|
+	 * 	+---+----+
+	 * 	|0	|	0|
+	 * 	|0	|	1|
+	 * 	|1	|	1|
+	 * 	|1	|	0|
+	 * 	|0	|	0|
+	 * 	+---+----+
+	 */
+	if (Gpio_pin == ENCODER_A_Pin || Gpio_pin == ENCODER_B_Pin) {
+		enc_input.encoder_a_input = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
+		enc_input.encoder_b_input = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
+		new_enc_state = enc_input.encoder_a_input << 1 | enc_input.encoder_b_input;
+
+		if (old_enc_state == 0 && new_enc_state == 1) {
+			input_counter++;
+		} else if (old_enc_state == 1 && new_enc_state == 3) {
+			input_counter++;
+		} else if (old_enc_state == 3 && new_enc_state == 2) {
+			input_counter++;
+		} else if (old_enc_state == 2 && new_enc_state == 0) {
+			input_counter++;
+		} else if (old_enc_state == 0 && new_enc_state == 2) {
+			input_counter--;
+		} else if (old_enc_state == 2 && new_enc_state == 3) {
+			input_counter--;
+		} else if (old_enc_state == 3 && new_enc_state == 1) {
+			input_counter--;
+		} else if (old_enc_state == 1 && new_enc_state == 0) {
+			input_counter--;
+		}
+		old_enc_state = new_enc_state;
+		set_base_sec_timer(HAL_GetTick());
+	}
+
+//	if (Gpio_pin == Temp_in_a_Pin || Gpio_pin == Temp_in_b_Pin) {
+//		generated_out_enc_new_state = HAL_GPIO_ReadPin(Temp_in_a_GPIO_Port, Temp_in_a_Pin) << 1 | HAL_GPIO_ReadPin(Temp_in_b_GPIO_Port, Temp_in_b_Pin);
+//		if (generated_out_enc_new_state == 0 && generated_out_enc_new_state == 1) {
+//			generated_output++;
+//		} else if (generated_out_enc_new_state == 1 && generated_out_enc_new_state == 3) {
+//			generated_output++;
+//		} else if (generated_out_enc_new_state == 3 && generated_out_enc_new_state == 2) {
+//			generated_output++;
+//		} else if (generated_out_enc_new_state == 2 && generated_out_enc_new_state == 0) {
+//			generated_output++;
+//		} else if (generated_out_enc_new_state == 0 && generated_out_enc_new_state == 2) {
+//			generated_output--;
+//		} else if (generated_out_enc_new_state == 2 && generated_out_enc_new_state == 3) {
+//			generated_output--;
+//		} else if (generated_out_enc_new_state == 3 && generated_out_enc_new_state == 1) {
+//			generated_output--;
+//		} else if (generated_out_enc_new_state == 1 && generated_out_enc_new_state == 0) {
+//			generated_output--;
+//		}
+//		generated_out_enc_old_state = generated_out_enc_new_state;
+//	}
+}
+
+
+
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+////	if(htim == &htim14){
+////		hundred_us_counts++;
+////	}
+//}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	Interrupt_reader(GPIO_Pin);
+}
+
+void set_base_sec_timer(uint32_t time){
+	base_sec_counter = time;
+}
+
+void reset_input_counter(void){
+	input_counter = 0;
 }
 /* USER CODE END 4 */
 
