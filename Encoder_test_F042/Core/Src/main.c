@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,19 +41,35 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim14;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint32_t base_sec_counter;		// will be holding milliseconds, so result will be x1000 for seconds
 
+//uint32_t tim14_500ms_counter;
+//uint32_t tim14_new_tick_val;
+uint32_t tim14_last_tick_val;
+uint32_t tim14_10us_counter;
+
 // 	encoder input variables
 uint8_t old_enc_state, new_enc_state;
+
 int32_t input_counter;
-int16_t rotation_count;
+float rotation_count;
+
 struct encoder_input{
-	bool encoder_a_input;
-	bool encoder_b_input;
-}enc_input;
+//	bool other_edge_pending_a : 1;
+//	bool other_edge_pending_b : 1;
+	bool encoder_input : 1;
+	bool prev_encoder_input : 1;
+	uint32_t l2h_us;
+	uint32_t h2l_us;
+	uint32_t on_duration;
+	uint32_t off_duration;
+}enc_input_A, enc_input_B;
 
 
 #if OUTPUT_LOOPED_IN == 1
@@ -67,6 +83,8 @@ int32_t generated_output;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
 void Interrupt_reader(uint16_t);
 void set_base_sec_timer(uint32_t time);
@@ -107,8 +125,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   set_base_sec_timer(HAL_GetTick());
+  HAL_TIM_Base_Start_IT(&htim14);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,6 +143,7 @@ int main(void)
 		  set_base_sec_timer(current_time);
 		  reset_input_counter();
 	  }
+	  rotation_count = input_counter/(float)COMPLETE_ROTATION_COUNT;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -161,6 +183,113 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 48-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 0;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_OC_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 23;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 1;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_OC_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
+
 }
 
 /**
@@ -228,6 +357,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : Temp_in_B_Pin Temp_in_A_Pin */
+  GPIO_InitStruct.Pin = Temp_in_B_Pin|Temp_in_A_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
@@ -253,9 +388,33 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 	 * 	+---+----+
 	 */
 	if (Gpio_pin == ENCODER_A_Pin || Gpio_pin == ENCODER_B_Pin) {
-		enc_input.encoder_a_input = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
-		enc_input.encoder_b_input = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
-		new_enc_state = enc_input.encoder_a_input << 1 | enc_input.encoder_b_input;
+
+		enc_input_A.encoder_input = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
+		enc_input_B.encoder_input = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
+
+		new_enc_state = enc_input_A.encoder_input << 1 | enc_input_B.encoder_input;
+
+		if(enc_input_A.prev_encoder_input != enc_input_A.encoder_input){
+			if(enc_input_A.encoder_input){
+				enc_input_A.l2h_us = tim14_10us_counter;
+				enc_input_A.off_duration = enc_input_A.l2h_us - enc_input_A.h2l_us;
+			}else{
+				enc_input_A.h2l_us = tim14_10us_counter;
+				enc_input_A.on_duration = enc_input_A.h2l_us - enc_input_A.l2h_us;
+			}
+			enc_input_A.prev_encoder_input = enc_input_A.encoder_input;
+		}
+
+		if(enc_input_B.prev_encoder_input != enc_input_B.encoder_input){
+			if(enc_input_B.encoder_input){
+				enc_input_B.l2h_us = tim14_10us_counter;
+				enc_input_B.off_duration = enc_input_B.l2h_us - enc_input_B.h2l_us;
+			}else{
+				enc_input_B.h2l_us = tim14_10us_counter;
+				enc_input_B.on_duration = enc_input_B.h2l_us - enc_input_B.l2h_us;
+			}
+			enc_input_B.prev_encoder_input = enc_input_B.encoder_input;
+		}
 
 		if (old_enc_state == 0 && new_enc_state == 1) {
 			input_counter++;
@@ -303,11 +462,11 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 
 
 
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-////	if(htim == &htim14){
-////		hundred_us_counts++;
-////	}
-//}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim14){
+		tim14_10us_counter++;
+	}
+}
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	Interrupt_reader(GPIO_Pin);

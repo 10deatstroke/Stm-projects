@@ -74,6 +74,12 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define VCP_RX_Pin GPIO_PIN_15
 #define VCP_RX_GPIO_Port GPIOA
+#define Temp_in_B_Pin GPIO_PIN_4
+#define Temp_in_B_GPIO_Port GPIOB
+#define Temp_in_B_EXTI_IRQn EXTI4_15_IRQn
+#define Temp_in_A_Pin GPIO_PIN_5
+#define Temp_in_A_GPIO_Port GPIOB
+#define Temp_in_A_EXTI_IRQn EXTI4_15_IRQn
 #define ENCODER_A_Pin GPIO_PIN_7
 #define ENCODER_A_GPIO_Port GPIOB
 #define ENCODER_A_EXTI_IRQn EXTI4_15_IRQn
