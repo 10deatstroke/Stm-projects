@@ -60,8 +60,8 @@ all: main-build
 main-build: Encoder_input_2_output.elf secondary-outputs
 
 # Tool invocations
-Encoder_input_2_output.elf Encoder_input_2_output.map: $(OBJS) $(USER_OBJS) C:\Users\OraMic_Terminal\STM32CubeIDE\My_testing_workspace\Encoder_input_2_output\STM32F042K6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Encoder_input_2_output.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\OraMic_Terminal\STM32CubeIDE\My_testing_workspace\Encoder_input_2_output\STM32F042K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Encoder_input_2_output.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Encoder_input_2_output.elf Encoder_input_2_output.map: $(OBJS) $(USER_OBJS) C:\Users\OraMic_Terminal\Desktop\shikhar\Stm-projects\Encoder_test_F042\STM32F042K6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Encoder_input_2_output.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\OraMic_Terminal\Desktop\shikhar\Stm-projects\Encoder_test_F042\STM32F042K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Encoder_input_2_output.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -1,8 +1,9 @@
-../Core/Src/main.c:61:6:HAL_TIM_IC_CaptureCallback	16	static
-../Core/Src/main.c:70:5:main	8	static
-../Core/Src/main.c:123:6:SystemClock_Config	88	static
-../Core/Src/main.c:158:13:MX_TIM2_Init	64	static
-../Core/Src/main.c:207:13:MX_USART2_UART_Init	8	static
-../Core/Src/main.c:242:13:MX_GPIO_Init	48	static
-../Core/Src/main.c:266:6:HAL_GPIO_EXTI_Callback	16	static
-../Core/Src/main.c:289:6:Error_Handler	8	static,ignoring_inline_asm
+../Core/Src/main.c:85:5:main	16	static
+../Core/Src/main.c:136:6:SystemClock_Config	88	static
+../Core/Src/main.c:171:13:MX_USART2_UART_Init	8	static
+../Core/Src/main.c:206:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:242:6:Interrupt_reader	16	static
+../Core/Src/main.c:312:6:HAL_GPIO_EXTI_Callback	16	static
+../Core/Src/main.c:316:6:set_base_sec_timer	16	static
+../Core/Src/main.c:320:6:reset_input_counter	8	static
+../Core/Src/main.c:329:6:Error_Handler	8	static,ignoring_inline_asm
