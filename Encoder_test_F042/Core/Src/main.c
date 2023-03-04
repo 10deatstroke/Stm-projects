@@ -38,6 +38,19 @@
 #define OUTPUT_LOOPED_IN	1
 
 #define COMPLETE_ROTATION_COUNT		20.48
+
+#define FIRST_PROFILE_MIN_PULSE 22
+#define FIRST_PROFILE_MAX_PULSE 24
+
+#define SECOND_PROFILE_MIN_PULSE 67
+#define SECOND_PROFILE_MAX_PULSE 69
+
+#define THIRD_PROFILE_MIN_PULSE 114
+#define THIRD_PROFILE_MAX_PULSE 116
+
+#define FOURTH_PROFILE_MIN_PULSE 164
+#define FOURTH_PROFILE_MAX_PULSE 166
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -46,29 +59,17 @@ TIM_HandleTypeDef htim14;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t base_sec_counter;		// will be holding milliseconds, so result will be x1000 for seconds
+uint8_t pulse_profile[4] = {40, 27, 21, 14};
 
-//uint32_t tim14_500ms_counter;
-//uint32_t tim14_new_tick_val;
-uint32_t tim14_last_tick_val;
-uint32_t tim14_10us_counter;
+uint32_t base_sec_counter;		// will be holding milliseconds, so result will be x1000 for seconds
 
 // 	encoder input variables
 uint8_t old_enc_state, new_enc_state;
 
-int32_t input_counter,input_counter_display;
-float rotation_position;
+int32_t input_counter, input_counter_display, output_counter_A, output_counter_B;
 
-struct encoder_input{
-//	bool other_edge_pending_a : 1;
-//	bool other_edge_pending_b : 1;
-	bool encoder_input : 1;
-	bool prev_encoder_input : 1;
-	uint32_t l2h_us;
-	uint32_t h2l_us;
-	uint32_t on_duration;
-	uint32_t off_duration;
-}enc_input_A, enc_input_B;
+float rotation_position;	//	will hold current position in complete rotation
+uint16_t rotation_count;	// will hold total rotations executed till now
 
 
 #if OUTPUT_LOOPED_IN == 1
@@ -326,9 +327,7 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 	 */
 	if (Gpio_pin == ENCODER_A_Pin || Gpio_pin == ENCODER_B_Pin) {
 
-		enc_input_A.encoder_input = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
-		enc_input_B.encoder_input = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
-		new_enc_state = enc_input_A.encoder_input << 1 | enc_input_B.encoder_input;
+		new_enc_state = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin) << 1 | HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
 
 		if (old_enc_state == 0 && new_enc_state == 1) {
 			input_counter++;
@@ -347,43 +346,55 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 		} else if (old_enc_state == 1 && new_enc_state == 0) {
 			input_counter--;
 		}
+		if((input_counter % pulse_profile[3]) == 0){
+			input_counter++;
+		}
 		old_enc_state = new_enc_state;
 		set_base_sec_timer(HAL_GetTick());
-//		input_counter_display = input_counter/20.48;
 	}
 
-//	if (Gpio_pin == Temp_in_a_Pin || Gpio_pin == Temp_in_b_Pin) {
-//		generated_out_enc_new_state = HAL_GPIO_ReadPin(Temp_in_a_GPIO_Port, Temp_in_a_Pin) << 1 | HAL_GPIO_ReadPin(Temp_in_b_GPIO_Port, Temp_in_b_Pin);
-//		if (generated_out_enc_new_state == 0 && generated_out_enc_new_state == 1) {
-//			generated_output++;
-//		} else if (generated_out_enc_new_state == 1 && generated_out_enc_new_state == 3) {
-//			generated_output++;
-//		} else if (generated_out_enc_new_state == 3 && generated_out_enc_new_state == 2) {
-//			generated_output++;
-//		} else if (generated_out_enc_new_state == 2 && generated_out_enc_new_state == 0) {
-//			generated_output++;
-//		} else if (generated_out_enc_new_state == 0 && generated_out_enc_new_state == 2) {
-//			generated_output--;
-//		} else if (generated_out_enc_new_state == 2 && generated_out_enc_new_state == 3) {
-//			generated_output--;
-//		} else if (generated_out_enc_new_state == 3 && generated_out_enc_new_state == 1) {
-//			generated_output--;
-//		} else if (generated_out_enc_new_state == 1 && generated_out_enc_new_state == 0) {
-//			generated_output--;
-//		}
-//		generated_out_enc_old_state = generated_out_enc_new_state;
-//	}
+#if	OUTPUT_LOOPED_IN == 1
+	if (Gpio_pin == Temp_in_A_Pin || Gpio_pin == Temp_in_B_Pin) {
+
+		generated_out_enc_new_state = HAL_GPIO_ReadPin(Temp_in_A_GPIO_Port, Temp_in_A_Pin) << 1 | HAL_GPIO_ReadPin(Temp_in_B_GPIO_Port, Temp_in_B_Pin);
+
+		if (generated_out_enc_old_state == 0 && generated_out_enc_new_state == 1) {
+			generated_output++;
+		} else if (generated_out_enc_old_state == 1 && generated_out_enc_new_state == 3) {
+			generated_output++;
+		} else if (generated_out_enc_old_state == 3 && generated_out_enc_new_state == 2) {
+			generated_output++;
+		} else if (generated_out_enc_old_state == 2 && generated_out_enc_new_state == 0) {
+			generated_output++;
+		} else if (generated_out_enc_old_state == 0 && generated_out_enc_new_state == 2) {
+			generated_output--;
+		} else if (generated_out_enc_old_state == 2 && generated_out_enc_new_state == 3) {
+			generated_output--;
+		} else if (generated_out_enc_old_state == 3 && generated_out_enc_new_state == 1) {
+			generated_output--;
+		} else if (generated_out_enc_old_state == 1 && generated_out_enc_new_state == 0) {
+			generated_output--;
+		}
+		generated_out_enc_old_state = generated_out_enc_new_state;
+	}
+#endif
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim14){
-		HAL_GPIO_TogglePin(Out_Encoder_A_GPIO_Port, Out_Encoder_A_Pin);
+		if(output_counter_A < input_counter){
+			HAL_GPIO_TogglePin(Out_Encoder_A_GPIO_Port, Out_Encoder_A_Pin);
+			output_counter_A++;
+		}
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim14){
-		HAL_GPIO_TogglePin(Out_Encoder_B_GPIO_Port, Out_Encoder_B_Pin);
+		if(output_counter_B < input_counter){
+			HAL_GPIO_TogglePin(Out_Encoder_B_GPIO_Port, Out_Encoder_B_Pin);
+			output_counter_B++;
+		}
 	}
 }
 
