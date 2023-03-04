@@ -37,11 +37,10 @@
 /* USER CODE BEGIN PM */
 #define OUTPUT_LOOPED_IN	1
 
-#define COMPLETE_ROTATION_COUNT		80
+#define COMPLETE_ROTATION_COUNT		20.48
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim14;
 
 UART_HandleTypeDef huart2;
@@ -57,8 +56,8 @@ uint32_t tim14_10us_counter;
 // 	encoder input variables
 uint8_t old_enc_state, new_enc_state;
 
-int32_t input_counter;
-float rotation_count;
+int32_t input_counter,input_counter_display;
+float rotation_position;
 
 struct encoder_input{
 //	bool other_edge_pending_a : 1;
@@ -83,7 +82,6 @@ int32_t generated_output;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_TIM3_Init(void);
 static void MX_TIM14_Init(void);
 /* USER CODE BEGIN PFP */
 void Interrupt_reader(uint16_t);
@@ -125,10 +123,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_TIM3_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   set_base_sec_timer(HAL_GetTick());
+  HAL_TIM_IC_Start_IT(&htim14, TIM_CHANNEL_1);
   HAL_TIM_Base_Start_IT(&htim14);
   /* USER CODE END 2 */
 
@@ -143,7 +141,8 @@ int main(void)
 		  set_base_sec_timer(current_time);
 		  reset_input_counter();
 	  }
-	  rotation_count = input_counter/(float)COMPLETE_ROTATION_COUNT;
+	  rotation_position = input_counter/(float)COMPLETE_ROTATION_COUNT;
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -186,68 +185,6 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 48-1;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 0;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_OC_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_TIMING;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_OC_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
-
-}
-
-/**
   * @brief TIM14 Initialization Function
   * @param None
   * @retval None
@@ -265,9 +202,9 @@ static void MX_TIM14_Init(void)
 
   /* USER CODE END TIM14_Init 1 */
   htim14.Instance = TIM14;
-  htim14.Init.Prescaler = 23;
+  htim14.Init.Prescaler = 48-1;
   htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim14.Init.Period = 1;
+  htim14.Init.Period = 500-1;
   htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
@@ -279,7 +216,7 @@ static void MX_TIM14_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_TIMING;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 250-1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_OC_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -391,30 +328,7 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 
 		enc_input_A.encoder_input = HAL_GPIO_ReadPin(ENCODER_A_GPIO_Port, ENCODER_A_Pin);
 		enc_input_B.encoder_input = HAL_GPIO_ReadPin(ENCODER_B_GPIO_Port, ENCODER_B_Pin);
-
 		new_enc_state = enc_input_A.encoder_input << 1 | enc_input_B.encoder_input;
-
-		if(enc_input_A.prev_encoder_input != enc_input_A.encoder_input){
-			if(enc_input_A.encoder_input){
-				enc_input_A.l2h_us = tim14_10us_counter;
-				enc_input_A.off_duration = enc_input_A.l2h_us - enc_input_A.h2l_us;
-			}else{
-				enc_input_A.h2l_us = tim14_10us_counter;
-				enc_input_A.on_duration = enc_input_A.h2l_us - enc_input_A.l2h_us;
-			}
-			enc_input_A.prev_encoder_input = enc_input_A.encoder_input;
-		}
-
-		if(enc_input_B.prev_encoder_input != enc_input_B.encoder_input){
-			if(enc_input_B.encoder_input){
-				enc_input_B.l2h_us = tim14_10us_counter;
-				enc_input_B.off_duration = enc_input_B.l2h_us - enc_input_B.h2l_us;
-			}else{
-				enc_input_B.h2l_us = tim14_10us_counter;
-				enc_input_B.on_duration = enc_input_B.h2l_us - enc_input_B.l2h_us;
-			}
-			enc_input_B.prev_encoder_input = enc_input_B.encoder_input;
-		}
 
 		if (old_enc_state == 0 && new_enc_state == 1) {
 			input_counter++;
@@ -435,6 +349,7 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 		}
 		old_enc_state = new_enc_state;
 		set_base_sec_timer(HAL_GetTick());
+//		input_counter_display = input_counter/20.48;
 	}
 
 //	if (Gpio_pin == Temp_in_a_Pin || Gpio_pin == Temp_in_b_Pin) {
@@ -460,11 +375,15 @@ void Interrupt_reader(uint16_t Gpio_pin) {
 //	}
 }
 
-
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim14){
+		HAL_GPIO_TogglePin(Out_Encoder_A_GPIO_Port, Out_Encoder_A_Pin);
+	}
+}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim == &htim14){
-		tim14_10us_counter++;
+		HAL_GPIO_TogglePin(Out_Encoder_B_GPIO_Port, Out_Encoder_B_Pin);
 	}
 }
 
